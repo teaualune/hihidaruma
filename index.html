@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://www.facebook.com/2008/fbml">
+<head>
+<meta charset="UTF-8">
+<title>Hihidaruma - Open Hack Day</title>
+<style>
+#fb_api :button {
+	float: left;
+}
+#login, #logout, #fr_login, #tabbedPanels .album{
+	 cursor: pointer;
+}
+#photoMain{
+	width:1200px;
+	-webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    margin-top: 10px;
+	margin-left: auto;
+    margin-right:auto;
+}
+#albums .album{
+	float: left;
+	padding: 10px;
+	border: solid 1px black;
+	margin: 10px;
+	background-color:navy;
+}
+
+#flickr_albums .album{
+	padding: 10px;
+	border: solid 1px black;
+	margin: 10px;	
+	background-color:BlueViolet;	
+}
+
+#flickr_albums .album img{
+	width:100%;
+}
+
+#albums .album p, #albums .album h2, #flickr_albums .album p, #flickr_albums .album h2{
+	color:white;
+	width:180px;
+}
+
+.coverPhoto, #canvas li{
+	width:200px;
+	height:200px;
+    padding:3px;
+}
+
+.photoImg{
+	max-width:100%;
+	max-height:100%;
+}
+
+#tabbedPanel{
+	width:50%;
+}
+.tabs {
+	margin:0;
+	padding:0;
+}
+.tabs li{
+	float:left;
+	list-style:none;
+	width:200px;
+}
+.tabs a{
+	display:block;
+	text-decoration:none;
+	padding: 3px,5px;
+	background-color: rgb(110,138,195);
+	margin-right: 10px;
+	border: 1px solid rgb(153,153,153);
+	margin-bottom: -1px;
+}
+.tabs a.flickr_a{
+	color: #FF00FF;
+}
+.tabs a.active{
+	border-bottom: 1px solid white;
+	background-color:white;
+	color: rgb(51,72,115);
+	position: relative;
+}
+.panelContainer{
+	clear:left;
+	border: 1px solid rgb(153,153,153);	
+}
+
+</style>
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/combo?3.6.0/build/cssreset/cssreset-min.css&gallery-2012.09.12-20-02/build/gallery-bottle/assets/skins/sam/gallery-bottle.css">
+<link href="fancybox/jquery.fancybox-1.3.4.css" rel="stylesheet">
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.9.0/themes/base/jquery-ui.css" />
+<link rel="stylesheet" href="stylesheets/prototype.css" />
+<link rel="stylesheet" href="stylesheets/weather.css" />
+<script src="http://yui.yahooapis.com/3.6.0/build/yui/yui-min.js"></script>
+<script src="http://code.jquery.com/jquery-1.8.2.js"></script>
+<script src="http://code.jquery.com/ui/1.9.0/jquery-ui.js"></script>
+<script src="fancybox/jquery.fancybox-1.3.4.min.js"></script>
+<!--<script type="text/javascript" src="http://api.maps.yahoo.com/ajaxymap?v=3.8&appid=YD-eQRpTl0_JX2E95l_xAFs5UwZUlNQhhn7lj1H"></script> -->
+<script src="js/indicator.js"></script>
+<script src="js/image_scale.js"></script>
+<script src="js/bar.js"></script>
+<!--<script src="js/map.js"></script>-->
+<script src="js/canvas_resize.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/gallery_and_canvas.js"></script>
+<script src="js/setting.js"></script>
+<script>
+//FB syncInit 
+window.fbAsyncInit = function() {
+	FB.init({
+		appId : '228669847261809', // App ID，請輸入 3.1 所又得的 App ID
+		channelURL : 'channel.html', // 請輸入 3.2 所新增的 channel.html 網址
+		status : true, // check login status 
+		cookie : true, // enable cookies to allow the server to access the session
+		oauth : true, // enable OAuth 2.0 
+		xfbml : true // parse XFBML 
+	});
+};
+
+// Load the SDK Asynchronously 
+(function(d){
+   var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+   if (d.getElementById(id)) {return;}
+   js = d.createElement('script'); js.id = id; js.async = true;
+   js.src = "//connect.facebook.net/en_US/all.js";
+   ref.parentNode.insertBefore(js, ref);
+ }(document));
+
+function postApi(){
+	var body = 'Reading JS SDK documentation';
+	FB.api('/me/feed', 'post', { message: body }, function(response) {
+ 		if (!response || response.error) {
+   	 		alert('Error occured');
+  		} else {
+    		alert('Post ID: ' + response.id);
+  		}
+	});
+}
+
+function showPhotos(album_id){
+	FB.api('/'+album_id+'/photos?fields=id,name,source&limit=1000', function(response){
+		var $photos = $('#photos');
+        var $gallery = $('#gallery');
+        $gallery.html('');
+                
+		var photosData = response.data;
+        
+        var photoHTML;
+        $.each(photosData, function(i, photo) {
+            photoHTML = '';
+            photoHTML += '<li class="scroll-content-item ui-widget-content init">';
+            photoHTML += '<span class="photo" id="'+photo.id+'">';
+            photoHTML += '<a href="'+photo.source+'" rel="gallery">';
+			photoHTML += '<img class="photoImg" src="'+photo.source+'" />';
+			photoHTML += '</a>';
+            photoHTML += '</span>';
+            photoHTML += '</li>';
+            $gallery.append(photoHTML);
+        });        
+
+		$('#gallery .photo a').fancybox({
+			transitionIn:'elastic',
+			transitionOut:'elastic',
+			cyclic:true
+		});
+		
+		$('#tabbedPanels').slideUp();
+		$('#photoMain').fadeIn(200, function() {
+			BAR(photosData.length, 100);
+			GandC();
+            
+		});
+	}); //end FB.api
+	/*
+	$('#albums').slideUp();
+	$('#photoMain').fadeIn(500, function() {
+		BAR();
+		GandC();
+	});*/
+    
+}
+
+function getAlbums(){
+    FB.api('/me/albums?fields=id,name,cover_photo,count&limit=500', function(response) {
+    	var $albums = $('#albums');
+    	$albums.html('');
+        var albumsData = response.data;
+        //var jsonStr = JSON.stringify(response.data);      
+        $.each(albumsData, function(i,album){
+        	var albumHTML = '';
+        	FB.api('/'+album.cover_photo+'?fields=source', function(response){
+        		if(typeof response.source != 'undefined'){
+        			albumHTML = '<span class="album" id="'+album.id+'" onclick="showPhotos('+album.id+')">';
+        			albumHTML += '<img class="coverPhoto" src="'+response.source+'">';
+        			albumHTML += '<h2>'+album.name+'</h2>';
+        			albumHTML += '<p>照片數: '+album.count+'</p>';
+        			albumHTML += '</span>';
+                	$albums.append(albumHTML);
+        		}
+                
+                stopIndicator();
+        	}); //end api             	
+        }); //end each
+    }); //end api
+  	//$('#photoMain').fadeOut();
+    //$('#albums').slideDown();
+}
+
+// ----------
+
+function getFlickrPhoto(photoset_id){
+
+    startIndicator();
+    
+	$.ajax({
+	     url : 'http://query.yahooapis.com/v1/public/yql',
+	     jsonp : 'callback',
+	     dataType : 'jsonp',
+	     data : {
+	    	 q : 'select * from flickr.photosets.photos(0) where photoset_id='+photoset_id+
+      		' and api_key=5f904fc35140f963afc594c0762e20c2',
+	         format : 'json'
+	     },
+	     // parse response data 
+	     success : function(data) {
+	       var $gallery = $('#gallery');
+	       $gallery.html('');
+	       var photosData = data.query.results.photo;
+	       
+	       $.each(photosData, function(i,photo){
+	    	 var photo_url = 'http://farm'+photo.farm+'.static.flickr.com/'+photo.server+'/'+photo.id+'_'+photo.secret+'.jpg';  
+	    	 var photoHTML='';
+	    	 photoHTML += '<li class="scroll-content-item ui-widget-content init">';
+	    	 photoHTML += '<span class="photo" id="'+photo.id+'">';
+	         photoHTML += '<a href="'+photo_url+'" rel="gallery">';
+		     photoHTML += '<img class="photoImg" src="'+photo_url+'" />';
+		     photoHTML += '</a>';
+	         photoHTML += '</span>';
+	         photoHTML += '</li>';
+	         $gallery.append(photoHTML);
+	       });
+	       
+	       $('#gallery .photo a').fancybox({
+				transitionIn:'elastic',
+				transitionOut:'elastic',
+				cyclic:true
+			});
+	       //$('#albums').slideUp();
+	       //$('#flickr_albums').slideUp();
+	        $('#tabbedPanels').slideUp();
+			$('#photoMain').fadeIn(400, function() {
+				BAR(photosData.length, 100);
+				GandC();
+                
+                            stopIndicator();
+			});
+            
+
+	     }
+   });
+}
+
+function getFlickrAlbums(){
+
+    startIndicator();
+
+	$.ajax({
+	     url : 'http://query.yahooapis.com/v1/public/yql',
+	     jsonp : 'callback',
+	     dataType : 'jsonp',
+	     data : {
+	         q : 'select * from xml where url="http://api.flickr.com/services/rest/?method=flickr.photosets.getList'+
+	        		'&api_key=5f904fc35140f963afc594c0762e20c2&user_id=28360029@N03" and itemPath="rsp.photosets.photoset" limit 10',
+	         format : 'json'
+	     },
+	     // parse response data 
+	     success : function(data) {
+	       $.each(data.query.results.photoset, function(i,photoset){
+	    	 //var albumHTML = '';   
+	         var coverPhoto_url = 'http://farm'+photoset.farm+'.static.flickr.com/'+photoset.server+'/'+photoset.primary+'_'+photoset.secret+'.jpg';
+	         
+	         var albumHTML = '<div data-icon="'+coverPhoto_url+'" class="album" onclick="getFlickrPhoto('+"'"+photoset.id+"'"+')">';
+	    	 albumHTML += '<i></i>';
+	    	 albumHTML += '<h2>'+photoset.title+'</h2>';
+ 			 albumHTML += '<p>照片數: '+photoset.photos+'</p>';
+	    	 albumHTML += '</div>';         
+	       
+	         $(albumHTML).appendTo("#flickr_albums");
+	       });
+	       YUI({gallery: 'gallery-2012.09.26-20-36'}).use('gallery-bottle', function (Y) {
+	    	    Y.Bottle.init(true); 
+	    	});
+            
+                        stopIndicator();
+	     }
+  });
+}
+
+// -----------
+
+$(document).ready(function(){
+    var isFrLogin = 0;
+    
+    $('#not-login-window').hide();
+    
+	$('#logout').hide();
+	$('#photoMain').hide();
+
+	$('#fr_login').click(function(){
+		getFlickrAlbums();
+        isFrLogin = 1;
+		$(this).hide();
+		//$('#fr_logout').show();
+	});
+	
+	$('#login').click(function(){
+    
+                startIndicator();
+                
+                
+		 FB.login(function(response) {
+             if (response.authResponse) {
+               console.log('Welcome!  Fetching your information.... ');
+               FB.api('/me', function(response) {
+                 console.log('Good to see you, ' + response.name + '.');
+                // alert('Good to see you, ' + response.name + '.');
+                 $('#profile img').attr('src','https://graph.facebook.com/'+response.id+'/picture');
+                 $('#profile b').text(response.name);
+               }); 
+             } else {
+               console.log('User cancelled login or did not fully authorize.');
+               alert('User cancelled login or did not fully authorize.');
+             }	
+             getAlbums(); //抓相簿            
+  		}, {scope: 'publish_actions,read_stream,publish_stream,user_photos,friends_photos'});
+		 //$(this).hide();
+         
+         $('#login-window').hide();
+         
+		 $('#logout').show();
+         
+         $('#not-login-window').show();
+	}); //end click 
+	
+	$('#logout').click(function(){
+		FB.logout(function(response) {
+	        // user is now logged out
+	        alert("logout FB!");
+		});
+		$(this).hide();
+		$('#login').show();
+		$('#albums').html('');
+		$('#photoMain').fadeOut();
+		$('#profile img').attr('src','');
+		$('#profile b').text('');
+	}); //end click 
+	
+	$('#back').click(function(){
+		$('#photoMain').fadeOut();
+		//$('#photos').html('');
+	    $('#tabbedPanels').slideDown();
+	});
+
+	//tabs related 
+	$('.tabs a').click(function(){
+		$this = $(this);
+        if($this.attr('href')=="#flickr_albums" && isFrLogin==0){
+            $('#fr_login').show();
+        }else{
+            $('#fr_login').hide();
+        }
+		$('.panel').hide();
+		$('.tabs a.active').removeClass('active');
+		$this.addClass('active').blur();
+		var panel = $this.attr('href');
+		$(panel).fadeIn(250);
+		return false;
+	});
+	$('.tabs li:first a').click();	
+    
+    showWidgets();
+    
+    stopIndicator();
+    
+    setting();
+    
+    $('.iframe').fancybox({
+    	onStart:function(){
+    		var canvasHTML = $('#canvas-placeholder').html();
+        	$.post('generateHTML.php','html='+canvasHTML,function(data){});
+    	},
+    	width:1450,
+    	height:500,
+    	margin:15
+    });
+    
+}); //end ready 
+</script>
+</head>
+
+<body>
+<div id="fb-root"></div>
+
+
+<div id="login-window">
+    <img src="images/hihidaruma_shadow.png" id="hihidaruma" style="margin:auto; ">
+    <h1 style="margin:auto; font-size=32px;">Hihidaruma</h1>
+    <img src="images/fbLogin.png" id="login" style="margin:auto">
+    <img src="images/frLogin.png" style="margin:auto">
+</div>
+
+
+<div id="not-login-window">
+
+<span id='profile'><img src=""><b style="margin-left:10px;color:navy;"></b></span>
+<div id='fb_api'>
+	<form>
+		<img src="images/frLogin.png" id="fr_login">
+		<!--<img src="images/fbLogin.png" id="login">-->
+		<img src="images/fbLogout.png" id="logout">
+	</form>
+</div>
+
+<div id="tabbedPanels">
+	<ul class="tabs">
+        <li><a href="#albums" class="facebook_a">Facebook</a></li>	
+		<li><a href="#flickr_albums" class="flickr_a">Flickr</a></li>		
+	</ul>
+	<div class="panelContainer">
+        <div class='panel' id="albums"></div>
+		<div class='panel' data-role="photogrid" data-column-width="220" data-photo-node="i" id="flickr_albums"></div>
+	</div>
+</div>
+
+
+<div id="photoMain">
+	<input type="button" value="back" id="back">    
+    
+    <!-- prototype1 -->
+    <div id="tabs">
+    <ul>
+        <li><a href="#tabs-1">照片</a></li>
+        <li><a href="#tabs-2">小元件</a></li>
+        <li><a href="#tabs-3">輸出</a></li>
+    </ul>
+    <div id="tabs-1">
+<!--        <ul id="left-page-buttons">
+            <li id="left-page-button" class="page-button"><</li>
+            <li id="leftmost-page-button" class="page-button">|<</li>
+        </ul>-->
+        <div class="scroll-pane ui-widget ui-widget-header ui-corner-all ui-helper-clearfix">
+		    <ul id="gallery" class="scroll-content gallery ui-helper-reset ui-helper-clearfix"></ul>
+		    <div class="scroll-bar-wrap ui-widget-content ui-corner-bottom">
+		        <div class="scroll-bar"></div>
+		    </div>
+		</div>
+<!--        <ul id="right-page-buttons">
+            <li id="right-page-button" class="page-button">></li>
+        <li id="rightmost-page-button" class="page-button">>|</li>
+        </ul>-->
+    </div>
+    <div id="tabs-2">
+        <ul id="widgets-list">
+            <li class="scroll-content-item widget"><img class="widget-icon-img" src="images/title.png" /><div class="widget-description">標題</div></li>
+            <li class="scroll-content-item widget"><img class="widget-icon-img" src="images/text.png" /><div class="widget-description">文字</div></li>
+            <li class="scroll-content-item widget"><img class="widget-icon-img" src="images/weather.png" /><div class="widget-description">天氣</div></li>
+            <li class="scroll-content-item widget"><img class="widget-icon-img" src="images/date.png" /><div class="widget-description">日期</div></li>
+            <li class="scroll-content-item widget"><img class="widget-icon-img" src="images/blank.png" /><div class="widget-description">空白</div></li>
+            <!--<li class="scroll-content-item widget"><img class="widget-icon-img" src="images/blank.png" /><div class="widget-description">地圖</div></li>-->
+        </ul>
+    </div>
+    <div id="tabs-3">
+        <ul id="setting-list">
+            <li id="preview-button" class="scroll-content-item" style="margin-right:20px;"><a href="canvas.html" class="iframe"><img src="images/previewBtn.png" /></a></li>
+            <li id="export-button" class="scroll-content-item" style="margin-right:20px;"><a href="canvas.html" target="_blank"><img src="images/exportBtn.png" /></a></li>
+            <li id="export-area" class="scroll-content-item">
+                <ul>
+                    <li><a id="export-url-p" style="text-align:center;" target="_blank">Your canvas here!</a></li>
+                    <li><span id="fb-share" style="bottom:0px; line-height:24px; font-size=20px;"><img src="images/facebookButton.png" /> ← share with Facebook</span></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+<div id="canvas-placeholder">
+
+    <ul id="canvas">
+    </ul>
+    
+</div>
+    
+</div>
+
+</div> <!--not login window-->
+
+<div id="ajaxBusy"><p><img src="images/ajax-loader.gif"></p></div>
+
+
+</body>
+</html>
